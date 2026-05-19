@@ -384,44 +384,32 @@
 
   <footer class="footer">Built for Global AI Community Berlin with privacy-first QR join and wheel-based winner selection.</footer>
 
-  <script src="./node_modules/qrcode/build/qrcode.min.js"></script>
-  <script src="./node_modules/typescript/lib/typescript.js"></script>
-  <script id="app-ts" type="text/typescript">
-    interface Participant {
-      id: string;
-      name: string;
-      joinedAt: number;
-    }
-
-    interface State {
-      participants: Participant[];
-      winners: string[];
-    }
-
-    const state: State = {
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <script>
+    const state = {
       participants: [],
       winners: []
     };
 
-    const qrCanvas = document.getElementById('qrCanvas') as HTMLCanvasElement;
-    const joinLinkText = document.getElementById('joinLinkText') as HTMLElement;
-    const participantList = document.getElementById('participantList') as HTMLUListElement;
-    const winnersList = document.getElementById('winnersList') as HTMLUListElement;
-    const participantCount = document.getElementById('participantCount') as HTMLElement;
-    const spinButton = document.getElementById('spinButton') as HTMLButtonElement;
-    const clearButton = document.getElementById('clearButton') as HTMLButtonElement;
-    const joinForm = document.getElementById('joinForm') as HTMLFormElement;
-    const nameInput = document.getElementById('nameInput') as HTMLInputElement;
-    const joinMessage = document.getElementById('joinMessage') as HTMLElement;
-    const wheelFace = document.getElementById('wheelFace') as HTMLDivElement;
+    const qrCanvas = document.getElementById('qrCanvas');
+    const joinLinkText = document.getElementById('joinLinkText');
+    const participantList = document.getElementById('participantList');
+    const winnersList = document.getElementById('winnersList');
+    const participantCount = document.getElementById('participantCount');
+    const spinButton = document.getElementById('spinButton');
+    const clearButton = document.getElementById('clearButton');
+    const joinForm = document.getElementById('joinForm');
+    const nameInput = document.getElementById('nameInput');
+    const joinMessage = document.getElementById('joinMessage');
+    const wheelFace = document.getElementById('wheelFace');
 
-    const getJoinUrl = (): string => {
+    const getJoinUrl = () => {
       const url = new URL(window.location.href);
       url.hash = 'join';
       return url.toString();
     };
 
-    const saveState = (): void => {
+    const saveState = () => {
       try {
         localStorage.setItem('wheel-participants', JSON.stringify(state.participants));
         localStorage.setItem('wheel-winners', JSON.stringify(state.winners));
@@ -430,26 +418,26 @@
       }
     };
 
-    const loadState = (): void => {
+    const loadState = () => {
       try {
         const participantData = localStorage.getItem('wheel-participants');
         const winnersData = localStorage.getItem('wheel-winners');
         if (participantData) {
-          state.participants = JSON.parse(participantData) as Participant[];
+          state.participants = JSON.parse(participantData);
         }
         if (winnersData) {
-          state.winners = JSON.parse(winnersData) as string[];
+          state.winners = JSON.parse(winnersData);
         }
       } catch (error) {
         console.warn('Unable to load state', error);
       }
     };
 
-    const formatParticipants = (): Participant[] => {
+    const formatParticipants = () => {
       return state.participants.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
     };
 
-    const renderParticipantList = (): void => {
+    const renderParticipantList = () => {
       participantList.innerHTML = '';
       const sorted = formatParticipants();
       if (sorted.length === 0) {
@@ -467,7 +455,7 @@
       });
     };
 
-    const renderWinners = (): void => {
+    const renderWinners = () => {
       winnersList.innerHTML = '';
       if (state.winners.length === 0) {
         const item = document.createElement('li');
@@ -484,7 +472,7 @@
       });
     };
 
-    const renderWheel = (): void => {
+    const renderWheel = () => {
       wheelFace.innerHTML = '';
       const names = state.participants.map((participant) => participant.name || 'Anonymous');
       if (names.length === 0) {
@@ -516,13 +504,13 @@
       });
     };
 
-    const updateStatus = (): void => {
+    const updateStatus = () => {
       participantCount.textContent = `${state.participants.length} participant${state.participants.length === 1 ? '' : 's'}`;
       renderParticipantList();
       renderWinners();
     };
 
-    const addParticipant = (name: string): boolean => {
+    const addParticipant = (name) => {
       const normalized = name.trim();
       if (!normalized) return false;
       const exists = state.participants.some((participant) => participant.name.toLowerCase() === normalized.toLowerCase());
@@ -533,9 +521,9 @@
       return true;
     };
 
-    const pickWinners = (count: number): string[] => {
+    const pickWinners = (count) => {
       const entries = [...state.participants];
-      const winners: string[] = [];
+      const winners = [];
       while (winners.length < count && entries.length > 0) {
         const index = Math.floor(Math.random() * entries.length);
         winners.push(entries.splice(index, 1)[0].name);
@@ -543,7 +531,7 @@
       return winners;
     };
 
-    const spinWheel = async (): Promise<void> => {
+    const spinWheel = async () => {
       if (state.participants.length < 2) {
         joinMessage.textContent = 'Add at least two participants before spinning.';
         return;
@@ -571,7 +559,7 @@
       joinMessage.textContent = `🎉 Winners selected! Scroll to see the results.`;
     };
 
-    const renderJoinLink = (): void => {
+    const renderJoinLink = () => {
       const joinUrl = getJoinUrl();
       joinLinkText.innerHTML = `<code style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">${joinUrl}</code>`;
     };
@@ -606,7 +594,7 @@
       wheelFace.style.transform = 'rotate(0deg)';
     });
 
-    const init = (): void => {
+    const init = () => {
       loadState();
       renderJoinLink();
       updateStatus();
@@ -625,22 +613,6 @@
     };
 
     init();
-  </script>
-  <script>
-    const tsCode = document.getElementById('app-ts')?.textContent || '';
-    const js = ts.transpileModule(tsCode, {
-      compilerOptions: {
-        target: ts.ScriptTarget.ES2020,
-        module: ts.ModuleKind.ES2020,
-        lib: ['es2020', 'dom'],
-        strict: true,
-        allowJs: false,
-        noEmitOnError: false
-      }
-    }).outputText;
-    const blob = new Blob([js], { type: 'application/javascript' });
-    const moduleUrl = URL.createObjectURL(blob);
-    import(moduleUrl).catch((error) => console.error(error));
   </script>
 </body>
 </html>
