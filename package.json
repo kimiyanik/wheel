@@ -8,10 +8,7 @@
     "dev": "http-server . -c-1 -p 4173",
     "start": "npm run dev"
   },
-  "dependencies": {
-    "qrcode": "^1.5.1",
-    "typescript": "^5.6.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "http-server": "^14.1.1"
   }

@@ -299,6 +299,59 @@
       font-size: 0.94rem;
     }
 
+    body.join-view header,
+    body.join-view .panel:first-of-type,
+    body.join-view .wheel-shell,
+    body.join-view footer {
+      display: none !important;
+    }
+
+    body.join-view main {
+      grid-template-columns: 1fr;
+    }
+
+    body.join-view .panel-sm {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    body.presenter-mode header,
+    body.presenter-mode .hero-grid,
+    body.presenter-mode .panel-sm,
+    body.presenter-mode footer,
+    body.presenter-mode .list-card,
+    body.presenter-mode .panel:not(.wheel-shell) {
+      display: none !important;
+    }
+
+    body.presenter-mode .wheel-shell {
+      min-height: 100vh;
+      padding: 18px;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+
+    body.presenter-mode .wheel-board {
+      width: min(90vw, 760px);
+      margin: 0 auto;
+    }
+
+    .delete-button {
+      border: 1px solid rgba(248, 113, 113, 0.2);
+      background: rgba(248, 113, 113, 0.08);
+      color: #fecaca;
+      border-radius: 14px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.2s ease;
+    }
+
+    .delete-button:hover {
+      background: rgba(248, 113, 113, 0.18);
+    }
+
     @media (max-width: 960px) {
       .layout {
         grid-template-columns: 1fr;
@@ -343,6 +396,14 @@
             <p class="muted" id="joinLinkText"></p>
             <p class="muted">Add this page to your phone home screen for easy access.</p>
           </div>
+          <div class="list-card" id="presenterControls">
+            <h3>Presenter controls</h3>
+            <div style="display:flex; flex-wrap:wrap; gap:12px; margin-top:12px;">
+              <button id="presenterButton" class="button" type="button">Enter presenter view</button>
+              <button id="resetDatabaseButton" class="button" type="button" style="background: rgba(255,255,255,0.08); color:#e2e8f0; box-shadow:none;">Reset database</button>
+            </div>
+            <p class="muted" style="margin-top:12px;">Presenter mode enlarges the wheel and removes extra page chrome.</p>
+          </div>
         </div>
       </div>
     </section>
@@ -385,11 +446,26 @@
   <footer class="footer">Built for Global AI Community Berlin with privacy-first QR join and wheel-based winner selection.</footer>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
-  <script>
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+    import {
+      getDatabase,
+      ref,
+      push,
+      remove,
+      onValue,
+      child
+    } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js';
+
     const state = {
       participants: [],
       winners: []
     };
+    const pendingNames = new Set();
+    let db = null;
+    let entriesRef = null;
+    let hasFirebaseConfig = false;
+    let isPresenterMode = false;
 
     const qrCanvas = document.getElementById('qrCanvas');
     const joinLinkText = document.getElementById('joinLinkText');
@@ -398,6 +474,8 @@
     const participantCount = document.getElementById('participantCount');
     const spinButton = document.getElementById('spinButton');
     const clearButton = document.getElementById('clearButton');
+    const presenterButton = document.getElementById('presenterButton');
+    const resetDatabaseButton = document.getElementById('resetDatabaseButton');
     const joinForm = document.getElementById('joinForm');
     const nameInput = document.getElementById('nameInput');
     const joinMessage = document.getElementById('joinMessage');
@@ -407,6 +485,40 @@
       const url = new URL(window.location.href);
       url.hash = 'join';
       return url.toString();
+    };
+
+    const normalizeName = (name) => name.trim().replace(/\s+/g, ' ').toLowerCase();
+
+    const loadFirebaseConfig = async () => {
+      try {
+        const configModule = await import('./firebase-config.js');
+        if (!configModule?.firebaseConfig) {
+          throw new Error('firebaseConfig export missing in firebase-config.js');
+        }
+        const app = initializeApp(configModule.firebaseConfig);
+        db = getDatabase(app);
+        entriesRef = ref(db, 'entries');
+        hasFirebaseConfig = true;
+        return true;
+      } catch (error) {
+        console.warn('Firebase config not available:', error);
+        joinMessage.textContent = 'Firebase is not configured. Copy firebase-config.example.js to firebase-config.js and add your project values.';
+        return false;
+      }
+    };
+
+    const setFirebaseListeners = () => {
+      if (!entriesRef) return;
+      onValue(entriesRef, (snapshot) => {
+        const entries = [];
+        snapshot.forEach((childSnapshot) => {
+          const value = childSnapshot.val();
+          entries.push({ id: childSnapshot.key, ...value });
+        });
+        state.participants = entries;
+        updateStatus();
+        renderWheel();
+      });
     };
 
     const saveState = () => {
@@ -450,7 +562,12 @@
 
       sorted.forEach((participant, index) => {
         const item = document.createElement('li');
-        item.innerHTML = `<span>${participant.name}</span><span class="small-badge">${index + 1}</span>`;
+        const actionMarkup = isPresenterMode
+          ? participant.id
+            ? `<button class="delete-button" data-entry-id="${participant.id}">Delete</button>`
+            : `<span class="small-badge">${index + 1}</span>`
+          : `<span class="small-badge">${index + 1}</span>`;
+        item.innerHTML = `<span>${participant.name}</span>${actionMarkup}`;
         participantList.append(item);
       });
     };
@@ -510,15 +627,45 @@
       renderWinners();
     };
 
-    const addParticipant = (name) => {
+    const isDuplicateName = (name) => {
+      const normalized = normalizeName(name);
+      return state.participants.some((participant) => normalizeName(participant.name) === normalized) || pendingNames.has(normalized);
+    };
+
+    const addParticipantToDatabase = async (name) => {
       const normalized = name.trim();
-      if (!normalized) return false;
-      const exists = state.participants.some((participant) => participant.name.toLowerCase() === normalized.toLowerCase());
-      if (exists) return false;
-      state.participants.push({ id: crypto.randomUUID(), name: normalized, joinedAt: Date.now() });
-      saveState();
-      updateStatus();
-      return true;
+      if (!normalized) {
+        joinMessage.textContent = 'Please enter a valid name.';
+        return false;
+      }
+      if (!hasFirebaseConfig) {
+        joinMessage.textContent = 'Firebase is not configured. Ask the presenter to set up firebase-config.js.';
+        return false;
+      }
+      if (isDuplicateName(normalized)) {
+        joinMessage.textContent = 'This name is already entered in the wheel.';
+        return false;
+      }
+
+      const normalizedToken = normalizeName(normalized);
+      pendingNames.add(normalizedToken);
+      joinMessage.textContent = 'Checking availability...';
+
+      try {
+        await push(entriesRef, {
+          name: normalized,
+          joinedAt: Date.now(),
+          source: 'mobile'
+        });
+        joinMessage.textContent = 'Thank you! Your name was added to the wheel.';
+        return true;
+      } catch (error) {
+        console.error('Firebase add failed', error);
+        joinMessage.textContent = 'Unable to add your name right now. Try again in a moment.';
+        return false;
+      } finally {
+        pendingNames.delete(normalizedToken);
+      }
     };
 
     const pickWinners = (count) => {
@@ -564,45 +711,93 @@
       joinLinkText.innerHTML = `<code style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">${joinUrl}</code>`;
     };
 
-    joinForm.addEventListener('submit', (event) => {
+    const setPresenterMode = (enabled) => {
+      isPresenterMode = enabled;
+      document.body.classList.toggle('presenter-mode', enabled);
+      presenterButton.textContent = enabled ? 'Exit presenter view' : 'Enter presenter view';
+      renderParticipantList();
+    };
+
+    const resetDatabase = async () => {
+      if (!hasFirebaseConfig) {
+        joinMessage.textContent = 'Firebase is not configured. Cannot reset database.';
+        return;
+      }
+      if (!confirm('Remove all participant names from the shared database?')) return;
+      try {
+        await remove(entriesRef);
+        state.participants = [];
+        state.winners = [];
+        renderWheel();
+        updateStatus();
+        joinMessage.textContent = 'Database cleared.';
+      } catch (error) {
+        console.error('Reset database failed', error);
+        joinMessage.textContent = 'Unable to reset the database right now.';
+      }
+    };
+
+    const deleteEntry = async (entryId) => {
+      if (!hasFirebaseConfig) {
+        joinMessage.textContent = 'Firebase is not configured. Cannot delete entry.';
+        return;
+      }
+      try {
+        await remove(child(entriesRef, entryId));
+        joinMessage.textContent = 'Entry deleted.';
+      } catch (error) {
+        console.error('Delete entry failed', error);
+        joinMessage.textContent = 'Unable to delete that entry.';
+      }
+    };
+
+    participantList.addEventListener('click', (event) => {
+      const target = event.target;
+      if (target instanceof HTMLButtonElement && target.dataset.entryId) {
+        deleteEntry(target.dataset.entryId);
+      }
+    });
+
+    joinForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const name = nameInput.value;
-      if (!name.trim()) {
-        joinMessage.textContent = 'Please enter a name to join.';
-        return;
+      const added = await addParticipantToDatabase(name);
+      if (added) {
+        nameInput.value = '';
       }
-      const success = addParticipant(name);
-      if (!success) {
-        joinMessage.textContent = 'That name is already entered or invalid. Try another name.';
-        return;
-      }
-      nameInput.value = '';
-      joinMessage.textContent = 'Welcome to the wheel! Your name is now entered.';
     });
 
     spinButton.addEventListener('click', () => {
       void spinWheel();
     });
 
-    clearButton.addEventListener('click', () => {
-      if (!confirm('Clear all participant entries?')) return;
-      state.participants = [];
-      state.winners = [];
-      saveState();
-      updateStatus();
-      joinMessage.textContent = 'Participant list has been reset.';
-      wheelFace.style.transform = 'rotate(0deg)';
+    resetDatabaseButton.addEventListener('click', () => {
+      void resetDatabase();
     });
 
-    const init = () => {
+    presenterButton.addEventListener('click', () => {
+      setPresenterMode(!isPresenterMode);
+    });
+
+    const init = async () => {
       loadState();
       renderJoinLink();
       updateStatus();
       renderWheel();
 
       const hash = window.location.hash.toLowerCase();
+      const params = new URLSearchParams(window.location.search);
       if (hash === '#join') {
-        nameInput.focus();
+        document.body.classList.add('join-view');
+        setTimeout(() => nameInput.focus(), 200);
+      }
+      if (hash === '#presenter' || params.get('presenter') === '1') {
+        setPresenterMode(true);
+      }
+
+      const firebaseConfigured = await loadFirebaseConfig();
+      if (firebaseConfigured) {
+        setFirebaseListeners();
       }
 
       try {
