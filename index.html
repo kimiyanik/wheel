@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Global AI Community Wheel</title>
+  <meta name="description" content="A GDPR-friendly community wheel-of-names with mobile QR code join." />
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #06060a;
+      color: #f6f7fb;
+      accent-color: #7c3aed;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top left, rgba(124, 58, 237, 0.25), transparent 28%),
+                  radial-gradient(circle at right, rgba(16, 185, 129, 0.16), transparent 25%),
+                  linear-gradient(180deg, #090a10 0%, #041018 100%);
+      color: #f6f7fb;
+    }
+
+    header {
+      padding: 40px 24px 20px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(2.4rem, 4vw, 4rem);
+      line-height: 1.02;
+    }
+
+    header p {
+      margin: 18px auto 0;
+      max-width: 720px;
+      color: #cbd5e1;
+      font-size: 1.05rem;
+      line-height: 1.7;
+    }
+
+    .layout {
+      display: grid;
+      gap: 24px;
+      padding: 0 24px 40px;
+      max-width: 1280px;
+      margin: 0 auto;
+      grid-template-columns: 1.2fr 0.9fr;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 32px;
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(24px);
+      padding: 28px;
+      box-shadow: 0 40px 120px rgba(15, 23, 42, 0.24);
+    }
+
+    .panel h2 {
+      margin-top: 0;
+      font-size: 1.5rem;
+      letter-spacing: -0.03em;
+    }
+
+    .hero-grid {
+      display: grid;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .hero-grid > * {
+      min-width: 0;
+    }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 10px 16px;
+      background: rgba(124, 58, 237, 0.16);
+      color: #e9d5ff;
+      font-size: 0.92rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+    }
+
+    .section-grid {
+      display: grid;
+      gap: 20px;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .panel-sm {
+      padding: 24px;
+    }
+
+    .qr-frame {
+      display: grid;
+      place-items: center;
+      gap: 16px;
+      text-align: center;
+      padding: 24px;
+      border-radius: 28px;
+      background: rgba(148, 163, 184, 0.06);
+      border: 1px solid rgba(148, 163, 184, 0.08);
+    }
+
+    .qr-frame canvas {
+      width: min(100%, 280px);
+      height: auto;
+      border-radius: 20px;
+      background: #fff;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 22px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      min-width: 160px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      background: linear-gradient(135deg, #7c3aed, #0891b2);
+      color: white;
+      box-shadow: 0 18px 45px rgba(124, 58, 237, 0.17);
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 22px 60px rgba(124, 58, 237, 0.22);
+    }
+
+    .muted {
+      color: #94a3b8;
+    }
+
+    form {
+      display: grid;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(15, 23, 42, 0.92);
+      color: #f8fafc;
+      padding: 14px 16px;
+      font-size: 1rem;
+    }
+
+    .card {
+      display: grid;
+      gap: 18px;
+    }
+
+    .list-card {
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.08);
+      border-radius: 24px;
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    .list-card ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .list-card li {
+      padding: 14px 18px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.72);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      color: #e2e8f0;
+      font-size: 0.98rem;
+    }
+
+    .small-badge {
+      font-size: 0.8rem;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(99, 102, 241, 0.16);
+      color: #c4b5fd;
+    }
+
+    .wheel-shell {
+      position: relative;
+      min-height: 420px;
+      border-radius: 36px;
+      padding: 28px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(15, 23, 42, 0.72));
+      border: 1px solid rgba(148, 163, 184, 0.08);
+    }
+
+    .wheel-board {
+      position: relative;
+      width: min(360px, 100%);
+      aspect-ratio: 1;
+      margin: 0 auto;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(99, 102, 241, 0.2), transparent 42%),
+                  radial-gradient(circle at 70% 70%, rgba(14, 165, 233, 0.14), transparent 30%),
+                  linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.98));
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.06), 0 28px 80px rgba(15, 23, 42, 0.28);
+      overflow: hidden;
+    }
+
+    .wheel-board::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(15, 23, 42, 0), rgba(15, 23, 42, 0.18) 70%);
+    }
+
+    .wheel-pointer {
+      position: absolute;
+      left: 50%;
+      top: -8px;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 18px solid transparent;
+      border-right: 18px solid transparent;
+      border-bottom: 32px solid #7c3aed;
+      filter: drop-shadow(0 8px 16px rgba(124, 58, 237, 0.24));
+      z-index: 2;
+    }
+
+    .wheel-face {
+      position: absolute;
+      inset: 0;
+      transform-origin: center center;
+      transition: transform 2.8s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .wheel-segment {
+      position: absolute;
+      width: 50%;
+      height: 50%;
+      top: 50%;
+      left: 50%;
+      transform-origin: 0% 0%;
+      overflow: hidden;
+    }
+
+    .wheel-segment span {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 200%;
+      padding: 8px 16px;
+      color: #f8fafc;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      transform-origin: 0% 0%;
+      white-space: nowrap;
+    }
+
+    .wheel-center {
+      position: absolute;
+      inset: 40%;
+      border-radius: 50%;
+      background: rgba(15, 23, 42, 0.92);
+      border: 2px solid rgba(148, 163, 184, 0.12);
+      display: grid;
+      place-items: center;
+      color: #e2e8f0;
+      font-size: 0.95rem;
+      text-align: center;
+      padding: 14px;
+    }
+
+    .footer {
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.94rem;
+    }
+
+    @media (max-width: 960px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .section-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="status-chip">Global AI Community — Berlin / AgentCon 2026</div>
+    <h1>Wheel of Names</h1>
+    <p>Scan the QR code with your phone to join the wheel game securely. The host can then spin and pick winners without ads, trackers, or third-party data harvesting.</p>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="hero-grid">
+        <div>
+          <div class="status-chip">Host screen</div>
+          <h2>Present the QR code</h2>
+          <p class="muted">People scan this code from their phones to join the event wheel. Scanning opens the same page with a fast join form and no trackers.</p>
+          <div class="qr-frame">
+            <canvas id="qrCanvas" aria-label="QR code to join the wheel game"></canvas>
+            <div class="muted">Scan to join the wheel game</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div>
+            <div class="status-chip">Mobile join</div>
+            <h2>Join from your phone</h2>
+            <p class="muted">If you're on mobile, open the page and enter your name. The host will see your entry instantly if the page is reloaded.</p>
+          </div>
+          <div class="list-card">
+            <h3>Join link</h3>
+            <p class="muted" id="joinLinkText"></p>
+            <p class="muted">Add this page to your phone home screen for easy access.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel wheel-shell">
+      <div class="wheel-pointer"></div>
+      <div class="wheel-board">
+        <div id="wheelFace" class="wheel-face"></div>
+        <div class="wheel-center">Spin to select live winners<br><span id="participantCount">0 participants</span></div>
+      </div>
+      <div style="margin-top:24px; display:flex; gap:14px; flex-wrap:wrap; justify-content:center;">
+        <button id="spinButton" class="button" type="button">Spin Wheel</button>
+        <button id="clearButton" class="button" type="button" style="background: rgba(255,255,255,0.08); color:#e2e8f0; box-shadow:none;">Reset names</button>
+      </div>
+      <div class="list-card" style="margin-top:24px;">
+        <h3>Winners</h3>
+        <ul id="winnersList"></ul>
+      </div>
+    </section>
+
+    <section class="panel-sm panel">
+      <div class="card">
+        <div>
+          <h2>Join the wheel</h2>
+          <p class="muted">If your browser opened with <strong>#join</strong>, add your name and tap the button to enter the raffle instantly.</p>
+        </div>
+        <form id="joinForm">
+          <input id="nameInput" type="text" name="name" placeholder="Your name" autocomplete="name" />
+          <button id="joinButton" class="button" type="submit">Join now</button>
+          <div id="joinMessage" class="muted"></div>
+        </form>
+      </div>
+      <div class="list-card">
+        <h3>Current participants</h3>
+        <ul id="participantList"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">Built for Global AI Community Berlin with privacy-first QR join and wheel-based winner selection.</footer>
+
+  <script src="./node_modules/qrcode/build/qrcode.min.js"></script>
+  <script src="./node_modules/typescript/lib/typescript.js"></script>
+  <script id="app-ts" type="text/typescript">
+    interface Participant {
+      id: string;
+      name: string;
+      joinedAt: number;
+    }
+
+    interface State {
+      participants: Participant[];
+      winners: string[];
+    }
+
+    const state: State = {
+      participants: [],
+      winners: []
+    };
+
+    const qrCanvas = document.getElementById('qrCanvas') as HTMLCanvasElement;
+    const joinLinkText = document.getElementById('joinLinkText') as HTMLElement;
+    const participantList = document.getElementById('participantList') as HTMLUListElement;
+    const winnersList = document.getElementById('winnersList') as HTMLUListElement;
+    const participantCount = document.getElementById('participantCount') as HTMLElement;
+    const spinButton = document.getElementById('spinButton') as HTMLButtonElement;
+    const clearButton = document.getElementById('clearButton') as HTMLButtonElement;
+    const joinForm = document.getElementById('joinForm') as HTMLFormElement;
+    const nameInput = document.getElementById('nameInput') as HTMLInputElement;
+    const joinMessage = document.getElementById('joinMessage') as HTMLElement;
+    const wheelFace = document.getElementById('wheelFace') as HTMLDivElement;
+
+    const getJoinUrl = (): string => {
+      const url = new URL(window.location.href);
+      url.hash = 'join';
+      return url.toString();
+    };
+
+    const saveState = (): void => {
+      try {
+        localStorage.setItem('wheel-participants', JSON.stringify(state.participants));
+        localStorage.setItem('wheel-winners', JSON.stringify(state.winners));
+      } catch (error) {
+        console.warn('Unable to save state', error);
+      }
+    };
+
+    const loadState = (): void => {
+      try {
+        const participantData = localStorage.getItem('wheel-participants');
+        const winnersData = localStorage.getItem('wheel-winners');
+        if (participantData) {
+          state.participants = JSON.parse(participantData) as Participant[];
+        }
+        if (winnersData) {
+          state.winners = JSON.parse(winnersData) as string[];
+        }
+      } catch (error) {
+        console.warn('Unable to load state', error);
+      }
+    };
+
+    const formatParticipants = (): Participant[] => {
+      return state.participants.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    };
+
+    const renderParticipantList = (): void => {
+      participantList.innerHTML = '';
+      const sorted = formatParticipants();
+      if (sorted.length === 0) {
+        const item = document.createElement('li');
+        item.textContent = 'No entries yet. Scan the QR code to join.';
+        item.className = 'muted';
+        participantList.append(item);
+        return;
+      }
+
+      sorted.forEach((participant, index) => {
+        const item = document.createElement('li');
+        item.innerHTML = `<span>${participant.name}</span><span class="small-badge">${index + 1}</span>`;
+        participantList.append(item);
+      });
+    };
+
+    const renderWinners = (): void => {
+      winnersList.innerHTML = '';
+      if (state.winners.length === 0) {
+        const item = document.createElement('li');
+        item.textContent = 'No winners selected yet.';
+        item.className = 'muted';
+        winnersList.append(item);
+        return;
+      }
+
+      state.winners.forEach((winner, index) => {
+        const item = document.createElement('li');
+        item.innerHTML = `<span>${winner}</span><span class="small-badge">Winner ${index + 1}</span>`;
+        winnersList.append(item);
+      });
+    };
+
+    const renderWheel = (): void => {
+      wheelFace.innerHTML = '';
+      const names = state.participants.map((participant) => participant.name || 'Anonymous');
+      if (names.length === 0) {
+        const placeholder = document.createElement('div');
+        placeholder.style.width = '100%';
+        placeholder.style.height = '100%';
+        placeholder.style.display = 'grid';
+        placeholder.style.placeItems = 'center';
+        placeholder.style.color = '#94a3b8';
+        placeholder.style.fontSize = '0.95rem';
+        placeholder.textContent = 'Add participants to populate the wheel.';
+        wheelFace.append(placeholder);
+        return;
+      }
+
+      const segments = names.length;
+      names.forEach((name, index) => {
+        const rotation = (360 / segments) * index;
+        const slice = document.createElement('div');
+        slice.className = 'wheel-segment';
+        slice.style.transform = `rotate(${rotation}deg)`;
+        slice.style.background = index % 2 === 0 ? 'rgba(79, 70, 229, 0.16)' : 'rgba(15, 23, 42, 0.04)';
+
+        const label = document.createElement('span');
+        label.textContent = name;
+        label.style.transform = `rotate(${360 / segments / 2}deg) translateY(-100%)`;
+        slice.appendChild(label);
+        wheelFace.appendChild(slice);
+      });
+    };
+
+    const updateStatus = (): void => {
+      participantCount.textContent = `${state.participants.length} participant${state.participants.length === 1 ? '' : 's'}`;
+      renderParticipantList();
+      renderWinners();
+    };
+
+    const addParticipant = (name: string): boolean => {
+      const normalized = name.trim();
+      if (!normalized) return false;
+      const exists = state.participants.some((participant) => participant.name.toLowerCase() === normalized.toLowerCase());
+      if (exists) return false;
+      state.participants.push({ id: crypto.randomUUID(), name: normalized, joinedAt: Date.now() });
+      saveState();
+      updateStatus();
+      return true;
+    };
+
+    const pickWinners = (count: number): string[] => {
+      const entries = [...state.participants];
+      const winners: string[] = [];
+      while (winners.length < count && entries.length > 0) {
+        const index = Math.floor(Math.random() * entries.length);
+        winners.push(entries.splice(index, 1)[0].name);
+      }
+      return winners;
+    };
+
+    const spinWheel = async (): Promise<void> => {
+      if (state.participants.length < 2) {
+        joinMessage.textContent = 'Add at least two participants before spinning.';
+        return;
+      }
+      joinMessage.textContent = '';
+
+      const turnCount = 5 + Math.floor(Math.random() * 5);
+      const degreesPerSlice = 360 / state.participants.length;
+      const randomSlice = Math.floor(Math.random() * state.participants.length);
+      const targetRotation = 360 * turnCount + randomSlice * degreesPerSlice + degreesPerSlice / 2;
+      wheelFace.style.transform = `rotate(${targetRotation}deg)`;
+
+      spinButton.disabled = true;
+      clearButton.disabled = true;
+      spinButton.textContent = 'Spinning…';
+
+      await new Promise((resolve) => setTimeout(resolve, 3200));
+
+      state.winners = pickWinners(5);
+      saveState();
+      renderWinners();
+      spinButton.disabled = false;
+      clearButton.disabled = false;
+      spinButton.textContent = 'Spin Wheel';
+      joinMessage.textContent = `🎉 Winners selected! Scroll to see the results.`;
+    };
+
+    const renderJoinLink = (): void => {
+      const joinUrl = getJoinUrl();
+      joinLinkText.innerHTML = `<code style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">${joinUrl}</code>`;
+    };
+
+    joinForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const name = nameInput.value;
+      if (!name.trim()) {
+        joinMessage.textContent = 'Please enter a name to join.';
+        return;
+      }
+      const success = addParticipant(name);
+      if (!success) {
+        joinMessage.textContent = 'That name is already entered or invalid. Try another name.';
+        return;
+      }
+      nameInput.value = '';
+      joinMessage.textContent = 'Welcome to the wheel! Your name is now entered.';
+    });
+
+    spinButton.addEventListener('click', () => {
+      void spinWheel();
+    });
+
+    clearButton.addEventListener('click', () => {
+      if (!confirm('Clear all participant entries?')) return;
+      state.participants = [];
+      state.winners = [];
+      saveState();
+      updateStatus();
+      joinMessage.textContent = 'Participant list has been reset.';
+      wheelFace.style.transform = 'rotate(0deg)';
+    });
+
+    const init = (): void => {
+      loadState();
+      renderJoinLink();
+      updateStatus();
+      renderWheel();
+
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#join') {
+        nameInput.focus();
+      }
+
+      try {
+        QRCode.toCanvas(qrCanvas, getJoinUrl(), { width: 280, margin: 1, color: { dark: '#0f172a', light: '#ffffff' } });
+      } catch (error) {
+        console.error('Unable to render QR code', error);
+      }
+    };
+
+    init();
+  </script>
+  <script>
+    const tsCode = document.getElementById('app-ts')?.textContent || '';
+    const js = ts.transpileModule(tsCode, {
+      compilerOptions: {
+        target: ts.ScriptTarget.ES2020,
+        module: ts.ModuleKind.ES2020,
+        lib: ['es2020', 'dom'],
+        strict: true,
+        allowJs: false,
+        noEmitOnError: false
+      }
+    }).outputText;
+    const blob = new Blob([js], { type: 'application/javascript' });
+    const moduleUrl = URL.createObjectURL(blob);
+    import(moduleUrl).catch((error) => console.error(error));
+  </script>
+</body>
+</html>
