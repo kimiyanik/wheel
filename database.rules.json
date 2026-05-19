@@ -1,0 +1,11 @@
+{
+  "rules": {
+    "entries": {
+      "$nameKey": {
+        ".read": true,
+        ".write": "!data.exists() && newData.exists() && newData.child('nameKey').val() === $nameKey",
+        ".validate": "newData.hasChildren(['name','nameKey','joinedAt']) && newData.child('name').isString() && newData.child('joinedAt').isNumber()"
+      }
+    }
+  }
+}
